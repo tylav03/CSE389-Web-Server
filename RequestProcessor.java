@@ -13,13 +13,19 @@ public class RequestProcessor implements Runnable {
     private Socket connection;
     private String method;
 
-    public RequestProcessor(File rootDirectory, String indexFileName, Socket connection, String method) {
-        if (rootDirectory.isFile()) {
+    // Constructor for the RequestProcessor class
+    public RequestProcessor(File rootDirectory, String indexFileName, Socket connection, String method) 
+    {
+        if (rootDirectory.isFile())  // Check if rootDirectory is a directory, not a file
+        {
             throw new IllegalArgumentException("rootDirectory must be a directory, not a file");
         }
-        try {
+        try 
+        {
             rootDirectory = rootDirectory.getCanonicalFile();
-        } catch (IOException ex) {
+        } 
+        catch (IOException ex) 
+        {
             logger.log(Level.WARNING, "Error getting canonical file", ex);
         }
         this.rootDirectory = rootDirectory;
@@ -28,7 +34,7 @@ public class RequestProcessor implements Runnable {
         this.connection = connection;
         this.method = method;
     }
-
+    // Entry point for the thread handling the request
     @Override
     public void run() {
         try (OutputStream raw = new BufferedOutputStream(connection.getOutputStream());
@@ -38,17 +44,20 @@ public class RequestProcessor implements Runnable {
             // Read the request line
             String requestLine = in.readLine();
 
+            // Log the request information
             logger.info(connection.getRemoteSocketAddress() + " " + requestLine);
 
             // Parse the request line
             String[] tokens = requestLine.split("\\s+");
             String version = "";
 
-            if (tokens.length > 2) {
+            if (tokens.length > 2) 
+            {
                 version = tokens[2];
             }
-
-            if ("GET".equals(method) || "HEAD".equals(method)) {
+            // Handle different HTTP methods
+            if ("GET".equals(method) || "HEAD".equals(method)) 
+            {
                 handleGetHeadRequest(tokens, version, out, raw);
             } else if ("POST".equals(method)) {
                 handlePostRequest(tokens, version, in, out, raw);
@@ -66,19 +75,28 @@ public class RequestProcessor implements Runnable {
         }
     }
 
-    private void handleGetHeadRequest(String[] tokens, String version, Writer out, OutputStream raw) throws IOException {
+     // Handle GET and HEAD requests
+    private void handleGetHeadRequest(String[] tokens, String version, Writer out, OutputStream raw) throws IOException 
+    {   
+         // Extract requested file name from the request
         String fileName = tokens[1];
+
         if (fileName.endsWith("/")) fileName += indexFileName;
+
+         // Get content type based on file extension
         String contentType = URLConnection.getFileNameMap().getContentTypeFor(fileName);
 
+         // Create File object representing the requested file
         File theFile = new File(rootDirectory, fileName.substring(1));
 
         if (theFile.canRead() && theFile.getCanonicalPath().startsWith(rootDirectory.getPath())) {
+            // Read file content into a byte array
             byte[] data = Files.readAllBytes(theFile.toPath());
 
+            // Respond to HEAD request with headers only
             if ("HEAD".equals(method)) {
                 sendHeader(out, "HTTP/1.0 200 OK", contentType, data.length);
-            } else {
+            } else {  // Respond to GET request with headers and file content
                 sendHeader(out, "HTTP/1.0 200 OK", contentType, data.length);
                 raw.write(data);
                 raw.flush();
@@ -87,7 +105,7 @@ public class RequestProcessor implements Runnable {
             handleFileNotFound(out, raw, version);
         }
     }
-
+    // Handle POST requests
     private void handlePostRequest(String[] tokens, String version, BufferedReader in, Writer out, OutputStream raw) throws IOException {
         
         // Process the POST request data, read data sent in body of POST request
@@ -101,12 +119,12 @@ public class RequestProcessor implements Runnable {
                 + "<H1>POST Request Processed</H1><p>Request Body: " + requestBody.toString() + "</p></BODY></HTML>"; //inserts the content of the requestBody (the data received in the POST request) into the HTML.
 
         sendHeader(out, "HTTP/1.0 200 OK", "text/html; charset=utf-8", responseBody.length());
-        if (!"HEAD".equals(method)) {
+        if (!"HEAD".equals(method)) {  // Respond to POST request with HTML body
             out.write(responseBody);
             out.flush();
         }
     }
-
+     // Send HTTP headers
     private void sendHeader(Writer out, String responseCode, String contentType, int length) throws IOException {
         out.write(responseCode + "\r\n");
         Date now = new Date();
