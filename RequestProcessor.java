@@ -43,6 +43,8 @@ public class RequestProcessor implements Runnable {
 
             // Read the request line
             String requestLine = in.readLine();
+            String[] splitStr = requestLine.split("\\s+");
+            method = splitStr[0];
 
             // Log the request information
             logger.info(connection.getRemoteSocketAddress() + " " + requestLine);
@@ -107,7 +109,6 @@ public class RequestProcessor implements Runnable {
     }
     // Handle POST requests
     private void handlePostRequest(String[] tokens, String version, BufferedReader in, Writer out, OutputStream raw) throws IOException {
-        
         // Process the POST request data, read data sent in body of POST request
         StringBuilder requestBody = new StringBuilder(); //accumalate data line by line
         while (in.ready()) { // continue loop until in.ready returns false, which means there is no more data left to read
@@ -117,7 +118,7 @@ public class RequestProcessor implements Runnable {
         // Process the POST request data 
         String responseBody = "<HTML><HEAD><TITLE>POST Request Processed</TITLE></HEAD><BODY>"
                 + "<H1>POST Request Processed</H1><p>Request Body: " + requestBody.toString() + "</p></BODY></HTML>"; //inserts the content of the requestBody (the data received in the POST request) into the HTML.
-
+      
         sendHeader(out, "HTTP/1.0 200 OK", "text/html; charset=utf-8", responseBody.length());
         if (!"HEAD".equals(method)) {  // Respond to POST request with HTML body
             out.write(responseBody);
