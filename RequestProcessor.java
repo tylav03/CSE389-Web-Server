@@ -13,9 +13,9 @@ public class RequestProcessor implements Runnable {
     private Socket connection;
     private String method;
 
-    public RequestProcessor(File rootDirectory, String indexFileName, Socket connection, String method) { //constructor 
+    public RequestProcessor(File rootDirectory, String indexFileName, Socket connection, String method) {
         if (rootDirectory.isFile()) {
-            throw new IllegalArgumentException("rootDirectory must be a directory, not a file"); //ensure rootDriectory is a directory
+            throw new IllegalArgumentException("rootDirectory must be a directory, not a file");
         }
         try {
             rootDirectory = rootDirectory.getCanonicalFile();
@@ -31,49 +31,27 @@ public class RequestProcessor implements Runnable {
 
     @Override
     public void run() {
-        String root = rootDirectory.getPath();
-
         try (OutputStream raw = new BufferedOutputStream(connection.getOutputStream());
              Writer out = new OutputStreamWriter(raw);
-             Reader in = new InputStreamReader(new BufferedInputStream(connection.getInputStream()), "US-ASCII")) {
+             BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream(), "US-ASCII"))) {
 
-            StringBuilder requestLine = new StringBuilder();
-            while (true) {
-                int c = in.read();
-                if (c == '\r' || c == '\n') break;
-                requestLine.append((char) c);
-            }
+            // Read the request line
+            String requestLine = in.readLine();
 
-            String get = requestLine.toString();
+            logger.info(connection.getRemoteSocketAddress() + " " + requestLine);
 
-            logger.info(connection.getRemoteSocketAddress() + " " + get);
-
-            String[] tokens = get.split("\\s+");
+            // Parse the request line
+            String[] tokens = requestLine.split("\\s+");
             String version = "";
 
-            if (method.equals("GET") || method.equals("HEAD")) { //Process GET and HEAD requests 
-                String fileName = tokens[1];
-                if (fileName.endsWith("/")) fileName += indexFileName;
-                String contentType = URLConnection.getFileNameMap().getContentTypeFor(fileName);
-                if (tokens.length > 2) {
-                    version = tokens[2];
-                }
+            if (tokens.length > 2) {
+                version = tokens[2];
+            }
 
-                File theFile = new File(rootDirectory, fileName.substring(1, fileName.length()));
-
-                if (theFile.canRead() && theFile.getCanonicalPath().startsWith(root)) {
-                    byte[] theData = Files.readAllBytes(theFile.toPath());
-
-                    if (isHeadRequest(method)) { //send HTTP headers
-                        sendHeader(out, "HTTP/1.0 200 OK", contentType, theData.length);
-                    } else {
-                        sendHeader(out, "HTTP/1.0 200 OK", contentType, theData.length);
-                        raw.write(theData); // send file content in the case of a GET request
-                        raw.flush();
-                    }
-                } else {
-                    handleFileNotFound(out, raw, version);
-                }
+            if ("GET".equals(method) || "HEAD".equals(method)) {
+                handleGetHeadRequest(tokens, version, out, raw);
+            } else if ("POST".equals(method)) {
+                handlePostRequest(tokens, version, in, out, raw);
             } else {
                 handleNotImplemented(out, version);
             }
@@ -88,7 +66,46 @@ public class RequestProcessor implements Runnable {
         }
     }
 
-    //send HTTP headers to the client 
+    private void handleGetHeadRequest(String[] tokens, String version, Writer out, OutputStream raw) throws IOException {
+        String fileName = tokens[1];
+        if (fileName.endsWith("/")) fileName += indexFileName;
+        String contentType = URLConnection.getFileNameMap().getContentTypeFor(fileName);
+
+        File theFile = new File(rootDirectory, fileName.substring(1));
+
+        if (theFile.canRead() && theFile.getCanonicalPath().startsWith(rootDirectory.getPath())) {
+            byte[] data = Files.readAllBytes(theFile.toPath());
+
+            if ("HEAD".equals(method)) {
+                sendHeader(out, "HTTP/1.0 200 OK", contentType, data.length);
+            } else {
+                sendHeader(out, "HTTP/1.0 200 OK", contentType, data.length);
+                raw.write(data);
+                raw.flush();
+            }
+        } else {
+            handleFileNotFound(out, raw, version);
+        }
+    }
+
+    private void handlePostRequest(String[] tokens, String version, BufferedReader in, Writer out, OutputStream raw) throws IOException {
+        
+        // Process the POST request data, read data sent in body of POST request
+        StringBuilder requestBody = new StringBuilder(); //accumalate data line by line
+        while (in.ready()) { // continue loop until in.ready returns false, which means there is no more data left to read
+            requestBody.append(in.readLine()); //Reads a line of text from the BufferedReader using readLine() and appends it to the requestBody. The readLine() method reads characters until a newline character ('\n') is encountered, and it returns the line excluding the newline character.
+        }
+
+        // Process the POST request data 
+        String responseBody = "<HTML><HEAD><TITLE>POST Request Processed</TITLE></HEAD><BODY>"
+                + "<H1>POST Request Processed</H1><p>Request Body: " + requestBody.toString() + "</p></BODY></HTML>"; //inserts the content of the requestBody (the data received in the POST request) into the HTML.
+
+        sendHeader(out, "HTTP/1.0 200 OK", "text/html; charset=utf-8", responseBody.length());
+        if (!"HEAD".equals(method)) {
+            out.write(responseBody);
+            out.flush();
+        }
+    }
 
     private void sendHeader(Writer out, String responseCode, String contentType, int length) throws IOException {
         out.write(responseCode + "\r\n");
@@ -101,40 +118,28 @@ public class RequestProcessor implements Runnable {
     }
 
     private void handleFileNotFound(Writer out, OutputStream raw, String version) throws IOException {
-        String body = new StringBuilder("<HTML>\r\n")
-                .append("<HEAD><TITLE>File Not Found</TITLE>\r\n")
-                .append("</HEAD>\r\n")
-                .append("<BODY>")
-                .append("<H1>HTTP Error 404: File Not Found</H1>\r\n")
-                .append("</BODY></HTML>\r\n").toString();
+        String body = "<HTML><HEAD><TITLE>File Not Found</TITLE></HEAD><BODY>"
+                + "<H1>HTTP Error 404: File Not Found</H1></BODY></HTML>";
 
         if (version.startsWith("HTTP/")) {
             sendHeader(out, "HTTP/1.0 404 File Not Found", "text/html; charset=utf-8", body.length());
         }
-        if (!isHeadRequest(method)) { // send the HTML body in the case of a GET request
+        if (!"HEAD".equals(method)) {
             out.write(body);
             out.flush();
         }
     }
 
     private void handleNotImplemented(Writer out, String version) throws IOException {
-        String body = new StringBuilder("<HTML>\r\n")
-                .append("<HEAD><TITLE>Not Implemented</TITLE>\r\n")
-                .append("</HEAD>\r\n")
-                .append("<BODY>")
-                .append("<H1>HTTP Error 501: Not Implemented</H1>\r\n")
-                .append("</BODY></HTML>\r\n").toString();
+        String body = "<HTML><HEAD><TITLE>Not Implemented</TITLE></HEAD><BODY>"
+                + "<H1>HTTP Error 501: Not Implemented</H1></BODY></HTML>";
 
         if (version.startsWith("HTTP/")) {
             sendHeader(out, "HTTP/1.0 501 Not Implemented", "text/html; charset=utf-8", body.length());
         }
-        if (!isHeadRequest(method)) {
+        if (!"HEAD".equals(method)) {
             out.write(body);
             out.flush();
         }
-    }
-
-    private boolean isHeadRequest(String method) { // check if the HTTP method is a HEAD request 
-        return method.equals("HEAD");
     }
 }
