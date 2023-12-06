@@ -20,6 +20,7 @@ public class ServerAdminUI extends JFrame {
         super("Server Admin UI");
         this.jhttp = jhttp;
 
+        // Initialize UI components
         statusLabel = new JLabel("Server Status: Not Checked");
 
         JButton checkStatusButton = new JButton("Check Status");
@@ -62,6 +63,7 @@ public class ServerAdminUI extends JFrame {
     }
 
     private void updateStatus(JHTTP jhttp) {
+        // Update the server status label on the UI
         SwingUtilities.invokeLater(() -> {
             if (jhttp.isRunning()) {
                 statusLabel.setText("Server Status: Running");
@@ -72,6 +74,7 @@ public class ServerAdminUI extends JFrame {
     }
 
     private void checkServerStatus() {
+        // Check server status by attempting to connect to localhost
         SwingUtilities.invokeLater(() -> {
             try (Socket socket = new Socket("localhost", jhttp.getPort())) {
                 // If connection succeeds, update status
@@ -84,6 +87,7 @@ public class ServerAdminUI extends JFrame {
     }
 
     private void loadAndDisplayLog() {
+        // Load and display the connection log in the JTextArea
         SwingUtilities.invokeLater(() -> {
             try {
                 // Use the stored document root directory
@@ -91,6 +95,7 @@ public class ServerAdminUI extends JFrame {
                     docRoot = getDocRoot();
                 }
 
+                // Read the log file and display its content
                 File logFile = new File(docRoot, "connection_log.txt");
 
                 try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
@@ -111,10 +116,12 @@ public class ServerAdminUI extends JFrame {
     }
 
     public static void main(String[] args) {
+        // Main method to initialize and start the UI
         SwingUtilities.invokeLater(() -> {
             int port = 8080;
 
             try {
+                // Initialize JHTTP server and ServerAdminUI
                 JHTTP jhttp = new JHTTP(getDocRoot(), port);
                 new ServerAdminUI(jhttp);
             } catch (IOException e) {
@@ -125,6 +132,7 @@ public class ServerAdminUI extends JFrame {
     }
 
     private static File getDocRoot() {
+        // Open a file chooser to select the document root directory
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Choose Document Root Directory");
         fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -139,6 +147,7 @@ public class ServerAdminUI extends JFrame {
     }
 
     private static void handleException(String message, Exception e) {
+        // Display an error message in a dialog box and print to console
         JOptionPane.showMessageDialog(null, message + "\n" + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         System.err.println("Exception: " + e.getMessage());
     }
