@@ -30,6 +30,7 @@ public class JHTTP {
             while (true) {
                 try {
                     Socket request = server.accept();
+                    
                     Runnable r = new RequestProcessor(rootDirectory, INDEX_FILE, request, "GET");
                     pool.submit(r);
                 } catch (IOException ex) {
