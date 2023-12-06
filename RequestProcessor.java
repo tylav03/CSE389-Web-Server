@@ -257,6 +257,9 @@ public class RequestProcessor implements Runnable {
     
         // Decode the Base64-encoded username:password string
         String authorizationHeader = findAuthorizationHeader(tokens);
+        for(int i = 0; i<tokens.length; i++){
+            System.out.println(tokens[i]);
+        }
         System.out.println("Authorization Header: " + authorizationHeader);
     
         if (authorizationHeader != null && authorizationHeader.startsWith("Basic ")) {

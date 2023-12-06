@@ -9,6 +9,8 @@ public class JHTTP {
     private static final int NUM_THREADS = 50;
     private static final String INDEX_FILE = "index.html";
 
+    private boolean running;
+
     private final File rootDirectory;
     private final int port;
 
@@ -28,6 +30,7 @@ public class JHTTP {
             logger.info("Document Root: " + rootDirectory);
 
             while (true) {
+                running = true;
                 try {
                     Socket request = server.accept();
                     
@@ -37,7 +40,16 @@ public class JHTTP {
                     logger.log(Level.WARNING, "Error accepting connection", ex);
                 }
             }
+            
         }
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public int getPort() {
+        return port;
     }
 
     public static void main(String[] args) {
