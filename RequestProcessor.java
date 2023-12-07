@@ -173,21 +173,21 @@ public class RequestProcessor implements Runnable {
             System.out.println(connection.getRemoteSocketAddress() + " " + requestLine);
 
             // Log headers for debugging
-            String header;
-            System.out.println("All Headers:");
-            while (!(header = in.readLine()).isEmpty()) {
-            System.out.println(header);
-            }
+            // String header;
+            // System.out.println("All Headers:");
+            // while (!(header = in.readLine()).isEmpty()) {
+            // System.out.println(header);
+            // }
 
             String[] tokens = requestLine.split("\\s+");
 
             // Log headers for debugging
-            Arrays.stream(tokens)
-            .filter(token -> !token.isEmpty())
-             .forEach(token -> System.out.println("Header: " + token));
+            // Arrays.stream(tokens)
+            // .filter(token -> !token.isEmpty())
+            //  .forEach(token -> System.out.println("Header: " + token));
 
-            String authorizationHeader = findAuthorizationHeader(tokens);
-            System.out.println("Authorization Header: " + authorizationHeader);
+            // String authorizationHeader = findAuthorizationHeader(tokens);
+            // System.out.println("Authorization Header: " + authorizationHeader);
 
 
             logger.info(connection.getRemoteSocketAddress() + " " + requestLine);
