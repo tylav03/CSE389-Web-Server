@@ -50,10 +50,30 @@ public class RequestProcessor implements Runnable {
         ) {
             // Read the request line
             String requestLine = in.readLine();
+
+            System.out.println(connection.getRemoteSocketAddress() + " " + requestLine);
+
+            // Log headers for debugging
+            // String header;
+            // System.out.println("All Headers:");
+            // while (!(header = in.readLine()).isEmpty()) {
+            // System.out.println(header);
+            // }
+
+            String[] tokens = requestLine.split("\\s+");
+
+            // Log headers for debugging
+            // Arrays.stream(tokens)
+            // .filter(token -> !token.isEmpty())
+            //  .forEach(token -> System.out.println("Header: " + token));
+
+            // String authorizationHeader = findAuthorizationHeader(tokens);
+            // System.out.println("Authorization Header: " + authorizationHeader);
+
+
             logger.info(connection.getRemoteSocketAddress() + " " + requestLine);
 
             // Parse the request line
-            String[] tokens = requestLine.split("\\s+");
             String version = (tokens.length > 2) ? tokens[2] : "";
 
             // Handle the request based on the HTTP method
@@ -101,30 +121,66 @@ public class RequestProcessor implements Runnable {
             }
         } else {
             // If the file is not cached, read it from the file system
-            File theFile = new File(rootDirectory, fileName.substring(1));
+                File theFile = new File(rootDirectory, fileName.substring(1));
 
-            // Check if the file is readable and within the server's root directory
-            if (theFile.canRead() && theFile.getCanonicalPath().startsWith(rootDirectory.getPath())) {
-                // Read the file data
-                byte[] data = Files.readAllBytes(theFile.toPath());
+                // Check if the file is readable and within the server's root directory
+                if (theFile.canRead() && theFile.getCanonicalPath().startsWith(rootDirectory.getPath())) {
+                    // Read the file data
+                    byte[] data = Files.readAllBytes(theFile.toPath());
 
-                // Cache the file data
-                cacheMap.put(fileName, data);
+                    // Cache the file data
+                    cacheMap.put(fileName, data);
 
-                // Send the HTTP header
-                sendHeader(out, "HTTP/1.0 200 OK", contentType, data.length);
+                    // Send the HTTP header
+                    sendHeader(out, "HTTP/1.0 200 OK", contentType, data.length);
 
-                // If it's a GET request, send the file data
-                if ("GET".equals(method)) {
-                    raw.write(data);
-                    raw.flush();
+                    // If it's a GET request, send the file data
+                    if ("GET".equals(method)) {
+                        raw.write(data);
+                        raw.flush();
+                    }
+                } else {
+                    handleFileNotFound(out, raw, version);
                 }
-            } else {
-                // If the file is not readable or outside the root directory, handle file not found
-                handleFileNotFound(out, raw, version);
             }
         }
-    }
+    // private boolean authenticateUser(String[] tokens) {
+    //     System.out.println("Entering authenticateUser method");
+    
+    //     // Decode the Base64-encoded username:password string
+    //     String authorizationHeader = findAuthorizationHeader(tokens);
+    //     for(int i = 0; i<tokens.length; i++){
+    //         System.out.println(tokens[i]);
+    //     }
+    //     System.out.println("Authorization Header: " + authorizationHeader);
+    
+    //     if (authorizationHeader != null && authorizationHeader.startsWith("Basic ")) {
+    //         String credentials = new String(Base64.getDecoder().decode(authorizationHeader.substring(6)));
+    //         System.out.println("Decoded credentials: " + credentials);
+    
+    //         String[] userPass = credentials.split(":");
+    //         String username = userPass[0].trim();
+    //         String password = userPass[1].trim();
+    
+    //         // Check against the user.txt file
+    //         Path userFilePath = rootDirectory.toPath().resolve("user.txt");
+    //         System.out.println("User file path: " + userFilePath.toAbsolutePath());
+    
+    //         try (BufferedReader userFileReader = new BufferedReader(new FileReader(userFilePath.toFile()))) {
+    //             String line;
+    //             while ((line = userFileReader.readLine()) != null) {
+    //                 System.out.println("Line: " + line);  // Log each line for debugging
+    //                 String[] parts = line.split(":");
+    //                 if (parts.length == 2 && parts[0].equals(username) && parts[1].equals(password)) {
+    //                     System.out.println("Authentication successful!");
+    //                     return true;
+    //                 }
+    //             }
+    //         } catch (IOException e) {
+    //             logger.log(Level.WARNING, "Error reading user.txt file", e);
+    //         }
+    //     }
+    // }
 
     // Method to handle POST requests
     private void handlePostRequest(String[] tokens, String version, BufferedReader in, Writer out, OutputStream raw) throws IOException {

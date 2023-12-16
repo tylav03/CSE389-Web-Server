@@ -17,7 +17,6 @@ public class JHTTP {
     // Default file to serve if the requested file is a directory
     private static final String INDEX_FILE = "index.html";
 
-    // Document root directory and port number for the web server
     private final File rootDirectory;
     private final int port;
 
@@ -44,6 +43,7 @@ public class JHTTP {
         return isRunning;
     }
 
+            
     // Getter method for getting the port number
     public int getPort() {
         return port;
@@ -109,25 +109,7 @@ public class JHTTP {
                 // Log a warning if an error occurs while accepting a connection
                 logger.log(Level.WARNING, "Error accepting connection", ex);
             }
-        }
-    }
-
-    // Stops the web server by closing the server socket and shutting down the thread pool
-    public void stop() {
-        if (serverSocket != null && !serverSocket.isClosed()) {
-            try {
-                // Close the server socket
-                serverSocket.close();
-                // Shut down the thread pool
-                pool.shutdown();
-                // Set the server status flag to false
-                isRunning = false;
-                // Log a message indicating that the server has stopped
-                logger.info("Server stopped");
-            } catch (IOException e) {
-                // Log a severe error if an error occurs while stopping the server
-                logger.log(Level.SEVERE, "Error stopping server", e);
-            }
+            
         }
     }
 
