@@ -14,3 +14,4 @@ C:\Users\decla\documents\github\CSE389-Web-Server 8080
 Now all you have to go onto a webrowser and type in local host and your port number:
 localhost:8080
 To use the server admin UI
+;)
